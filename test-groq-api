@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""
+Minimal test script for calling Groq with `openai/gpt-oss-safeguard-20b`.
+Usage:
+  GROQ_API_KEY=... python test-groq-api "Your prompt here"
+  cat prompt.txt | GROQ_API_KEY=... python test-groq-api
+"""
+
+import argparse
+import os
+import sys
+
+from typing import Optional
+from groq import Groq
+
+
+def build_prompt(cli_prompt: Optional[str]) -> str:
+    if cli_prompt is not None:
+        return cli_prompt
+    if not sys.stdin.isatty():
+        return sys.stdin.read().strip()
+    return ""
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Test Groq chat completion with openai/gpt-oss-safeguard-20b"
+    )
+    parser.add_argument("prompt", nargs="?", help="Prompt to send to the model")
+    parser.add_argument(
+        "--system",
+        default="You are a concise and accurate assistant.",
+        help="Optional system prompt.",
+    )
+    args = parser.parse_args()
+
+    user_prompt = build_prompt(args.prompt)
+    if not user_prompt:
+        print("No prompt provided.", file=sys.stderr)
+        print("Pass a prompt as an argument or pipe text to stdin.", file=sys.stderr)
+        return 1
+
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        print("Missing GROQ_API_KEY environment variable.", file=sys.stderr)
+        print("Export it with: export GROQ_API_KEY=your_key", file=sys.stderr)
+        return 1
+
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-safeguard-20b",
+        messages=[
+            {"role": "system", "content": args.system},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.2,
+        max_completion_tokens=512,
+    )
+
+    text = response.choices[0].message.content
+    print(text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
