@@ -1,2 +1,21 @@
-.DS_Store
+# Python virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+
+# Results output
+ma_pair_results.json
+
+# Node
+dashboard/node_modules/
+dashboard/dist/
+
+# OS
 **/.DS_Store
