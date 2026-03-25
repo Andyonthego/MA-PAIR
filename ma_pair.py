@@ -5,11 +5,11 @@ Extended from PAIR (Chao et al., 2023)
 Model assignments (all free-tier):
   Attacker    → Groq: llama-3.3-70b-versatile
   Target      → Google: gemini-3-flash-preview
-  Analyzer A  → Groq: llama-3.1-8b-instant
-  Analyzer B  → Groq: mixtral-8x7b-32768
-  Analyzer C  → Groq: llama-3.1-70b-versatile
-  Coordinator → Groq: mixtral-8x7b-32768
-  Judge       → Groq: openai/gpt-oss-safeguard-20b (with extended reasoning)
+  Analyzer A  → Groq: gpt-oss-120b
+  Analyzer B  → Groq: qwen3-32b
+  Analyzer C  → Groq: llama-4-scout-17b
+  Coordinator → Groq: qwen3-32b
+  Judge       → Groq: gpt-oss-safeguard-20b
 """
 
 import os
@@ -42,11 +42,11 @@ RETRY_WAIT_MULTIPLIER = 2  # exponential backoff multiplier (in seconds)
 
 ATTACKER_MODEL    = "llama-3.3-70b-versatile"
 TARGET_MODEL      = "gemini-3-flash-preview"    # Google
-ANALYZER_A_MODEL  = "openai/gpt-oss-120b"       # Groq
-ANALYZER_B_MODEL  = "openai/gpt-oss-120b"       # Groq
-ANALYZER_C_MODEL  = "openai/gpt-oss-120b"       # Groq
-COORDINATOR_MODEL = "openai/gpt-oss-120b"       # Groq
-JUDGE_MODEL       = "openai/gpt-oss-safeguard-20b"  # Groq (with openai/ prefix)
+ANALYZER_A_MODEL  = "gpt-oss-120b"              # Groq
+ANALYZER_B_MODEL  = "qwen3-32b"                 # Groq
+ANALYZER_C_MODEL  = "llama-4-scout-17b"         # Groq
+COORDINATOR_MODEL = "qwen3-32b"                 # Groq
+JUDGE_MODEL       = "gpt-oss-safeguard-20b"     # Groq
 
 # Strategy DB (from diagram: Role-play + Harmless approach)
 STRATEGY_DB = [
@@ -110,7 +110,6 @@ def get_groq():
 def call_groq(model: str, system: str, user: str, temperature: float = 0.9) -> str:
     """Call Groq API with automatic retries on failure."""
     try:
-        # Use max_completion_tokens for compatibility with newer models like gpt-oss-safeguard
         resp = get_groq().chat.completions.create(
             model=model,
             messages=[
@@ -118,8 +117,7 @@ def call_groq(model: str, system: str, user: str, temperature: float = 0.9) -> s
                 {"role": "user",   "content": user},
             ],
             temperature=temperature,
-            max_completion_tokens=1024,
-            top_p=1,
+            max_tokens=1024,
         )
         return resp.choices[0].message.content.strip()
     except Exception as e:
