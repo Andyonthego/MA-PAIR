@@ -6,13 +6,13 @@ Multi-Agent Prompt Automatic Iterative Refinement
 
 | Role | Model | Platform |
 |------|-------|----------|
-| Attacker | tbd | tbd |
-| Target | tbd | tbd |
-| Analyzer A | tbd | tbd |
-| Analyzer B | tbd | tbd |
-| Analyzer C | tbd | tbd |
-| Coordinator | tbd | tbd |
-| Judge | tbd | tbd |
+| Attacker | llama-3.3-70b-versatile | Groq |
+| Target | gemini-3-flash | Google |
+| Analyzer A | gpt-oss-120b | Groq |
+| Analyzer B | qwen3-32b | Groq |
+| Analyzer C | llama-4-scout-17b | Groq |
+| Coordinator | qwen3-32b | Groq |
+| Judge | gpt-oss-safeguard-20b | Groq |
 
 ## Setup
 
