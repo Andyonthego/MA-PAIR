@@ -12,7 +12,7 @@ Multi-Agent Prompt Automatic Iterative Refinement
 | Analyzer B | qwen3-32b | Groq |
 | Analyzer C | llama-4-scout-17b | Groq |
 | Coordinator | qwen3-32b | Groq |
-| Judge | gpt-oss-safeguard-20b | Groq |
+| Judge | llama-3.1-8b-instant | Groq |
 
 ## Setup
 
