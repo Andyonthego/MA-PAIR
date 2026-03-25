@@ -19,3 +19,6 @@ dashboard/dist/
 
 # OS
 **/.DS_Store
+
+# Scripts
+scripts/
