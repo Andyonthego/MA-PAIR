@@ -7,7 +7,7 @@ Multi-Agent Prompt Automatic Iterative Refinement
 | Role | Model | Platform |
 |------|-------|----------|
 | Attacker | llama-3.3-70b-versatile | Groq |
-| Target | gemini-3-flash | Google |
+| Target | gemini-3-flash-preview | Google |
 | Analyzer A | gpt-oss-120b | Groq |
 | Analyzer B | qwen3-32b | Groq |
 | Analyzer C | llama-4-scout-17b | Groq |
