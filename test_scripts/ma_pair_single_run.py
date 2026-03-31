@@ -18,6 +18,9 @@ from typing import Optional
 from groq import Groq
 import google.generativeai as genai
 from tenacity import retry, stop_after_attempt, wait_exponential
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(
