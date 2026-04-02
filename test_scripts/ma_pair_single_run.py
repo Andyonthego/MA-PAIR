@@ -41,7 +41,8 @@ MAX_RETRIES = 3  # max retries for API calls
 RETRY_WAIT_MULTIPLIER = 2  # exponential backoff multiplier (in seconds)
 
 ATTACKER_MODEL    = "llama-3.3-70b-versatile"
-TARGET_MODEL      = "gemini-3-flash-preview"    # Google
+#TARGET_MODEL      = "gemini-3-flash-preview"    # Google
+TARGET_MODEL      = "gemini-3.1-flash-lite-preview"    # Google
 ANALYZER_MODEL  = "openai/gpt-oss-120b"       # Groq
 COORDINATOR_MODEL = "openai/gpt-oss-120b"       # Groq
 JUDGE_MODEL       = "llama-3.1-8b-instant"  # Groq (with openai/ prefix)

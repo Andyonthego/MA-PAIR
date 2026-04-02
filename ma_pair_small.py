@@ -46,7 +46,8 @@ MAX_RETRIES = 3  # max retries for API calls
 RETRY_WAIT_MULTIPLIER = 2  # exponential backoff multiplier (in seconds)
 
 ATTACKER_MODEL = "llama-3.3-70b-versatile"
-TARGET_MODEL = "gemini-3-flash-preview"
+#TARGET_MODEL = "gemini-3-flash-preview"
+TARGET_MODEL      = "gemini-3.1-flash-lite-preview"    
 ANALYZER_A_MODEL = "openai/gpt-oss-120b"
 ANALYZER_B_MODEL = "qwen/qwen3-32b"
 ANALYZER_C_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
