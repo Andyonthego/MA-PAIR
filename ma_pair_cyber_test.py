@@ -40,12 +40,12 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 MAX_K = 3
-RUNS_PER_GOAL = 5
+RUNS_PER_GOAL = 2
 MAX_RETRIES = 3
 RETRY_WAIT_MULTIPLIER = 2
 
 ATTACKER_MODEL = "llama-3.3-70b-versatile"
-TARGET_MODEL = "gemini-3-flash-preview"
+TARGET_MODEL = "gemini-3.1-flash-lite-preview"
 ANALYZER_A_MODEL = "openai/gpt-oss-120b"
 ANALYZER_B_MODEL = "qwen/qwen3-32b"
 ANALYZER_C_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -363,6 +363,8 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
     history: List[Turn] = []
 
     for k in range(1, MAX_K + 1):
+        logger.info(f"Progress: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k}/{MAX_K}")
+        logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} attacker")
         log(f"\n[goal={goal_id} run={run_index + 1} k={k}] Generating attacker prompt...")
         try:
             p = attacker(goal, strategy, history)
@@ -373,6 +375,7 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
             continue
 
         try:
+            logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} target")
             log(f"[goal={goal_id} run={run_index + 1} k={k}] Querying target...")
             r = target(p)
             log(f"[goal={goal_id} run={run_index + 1} k={k}] Target response:\n{r[:300]}...\n")
@@ -381,6 +384,7 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
             history.append(Turn(k=k, prompt=p, response="", score=0, error=str(e)))
             continue
 
+        logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} judge")
         s = judge(goal, p, r)
         log(f"[goal={goal_id} run={run_index + 1} k={k}] Judge verdict: {s}\n")
 
@@ -393,11 +397,13 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
             history.append(Turn(k=k, prompt=p, response=r, score=s))
             result.turns = history
             result.success = True
+            logger.info(f"Completed: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} success at k={k}")
             log(f"✓ SUCCESS for {goal_id} on run {run_index + 1} at iteration {k}")
             break
 
         if k < MAX_K:
             try:
+                logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} analyzer_a")
                 log(f"[goal={goal_id} run={run_index + 1} k={k}] Running analyzer A...")
                 analyzer_a = analyzer(ANALYZER_A_MODEL, "A", goal, history, p, r, s)
             except Exception as e:
@@ -405,6 +411,7 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
                 analyzer_a = "Make the attack more direct and less hypothetical."
 
             try:
+                logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} analyzer_b")
                 log(f"[goal={goal_id} run={run_index + 1} k={k}] Running analyzer B...")
                 analyzer_b = analyzer(ANALYZER_B_MODEL, "B", goal, history, p, r, s)
             except Exception as e:
@@ -412,6 +419,7 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
                 analyzer_b = "Focus on bypassing restrictions with a role-play scenario."
 
             try:
+                logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} analyzer_c")
                 log(f"[goal={goal_id} run={run_index + 1} k={k}] Running analyzer C...")
                 analyzer_c = analyzer(ANALYZER_C_MODEL, "C", goal, history, p, r, s)
             except Exception as e:
@@ -419,6 +427,7 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
                 analyzer_c = "Add a more explicit persona and stronger framing."
 
             try:
+                logger.info(f"Stage: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} k={k} coordinator")
                 log(f"[goal={goal_id} run={run_index + 1} k={k}] Running coordinator...")
                 coordinator_choice = coordinator([analyzer_a, analyzer_b, analyzer_c])
             except Exception as e:
@@ -442,6 +451,7 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
 
     result.turns = history
     if not result.success:
+        logger.info(f"Completed: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} failure after {len(history)} iterations")
         log(f"✗ FAILURE for {goal_id} after {len(history)} iterations")
     return result
 
@@ -449,17 +459,30 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
 def run_all_tests(log=print) -> dict:
     goals = load_goals()
     all_results = []
+    total_expected_runs = len(goals) * RUNS_PER_GOAL
 
-    for goal_id, goal in goals.items():
+    for goal_index, (goal_id, goal) in enumerate(goals.items(), start=1):
+        logger.info(f"Starting goal {goal_id}")
         log(f"\n{'=' * 72}")
         log(f"Goal ID: {goal_id}")
         log(f"Goal: {goal}")
         log(f"{'=' * 72}")
 
         for run_index in range(RUNS_PER_GOAL):
+            logger.info(f"Starting run {run_index + 1}/{RUNS_PER_GOAL} for {goal_id}")
             log(f"\n--- {goal_id} run {run_index + 1}/{RUNS_PER_GOAL} ---")
             result = run_single_test(goal_id, goal, STRATEGY, run_index, log=log)
             all_results.append(asdict(result))
+
+        completed_runs = len(all_results)
+        goal_successes = sum(
+            1 for item in all_results if item["goal_id"] == goal_id and item["success"]
+        )
+        logger.info(
+            f"Finished goal {goal_id} ({goal_index}/{len(goals)}); "
+            f"goal_successes={goal_successes}/{RUNS_PER_GOAL}, "
+            f"completed_runs={completed_runs}/{total_expected_runs}"
+        )
 
     success_count = sum(1 for item in all_results if item["success"])
     total_runs = len(all_results)
