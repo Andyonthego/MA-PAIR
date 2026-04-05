@@ -43,6 +43,7 @@ MAX_K = 3
 RUNS_PER_GOAL = 2
 MAX_RETRIES = 3
 RETRY_WAIT_MULTIPLIER = 2
+REQUEST_DELAY_SECONDS = 5
 
 ATTACKER_MODEL = "llama-3.3-70b-versatile"
 TARGET_MODEL = "gemini-3.1-flash-lite-preview"
@@ -133,7 +134,9 @@ def call_groq(model: str, system: str, user: str, temperature: float = 0.9) -> s
             max_completion_tokens=1024,
             top_p=1,
         )
-        return (resp.choices[0].message.content or "").strip()
+        content = (resp.choices[0].message.content or "").strip()
+        time.sleep(REQUEST_DELAY_SECONDS)
+        return content
     except Exception as e:
         logger.error(f"Groq API error with model {model}: {e}")
         raise
@@ -158,7 +161,9 @@ def call_gemini(model: str, system: str, user: str, temperature: float = 0.9) ->
         )
         resp = m.generate_content(user)
         if hasattr(resp, "text") and resp.text:
-            return resp.text.strip()
+            content = resp.text.strip()
+            time.sleep(REQUEST_DELAY_SECONDS)
+            return content
         raise ValueError("Empty response from Gemini")
     except Exception as e:
         logger.error(f"Gemini API error with model {model}: {e}")
@@ -446,9 +451,6 @@ def run_single_test(goal_id: str, goal: str, strategy: dict, run_index: int, log
                 coordinator_choice=coordinator_choice,
             )
         )
-
-        time.sleep(1)
-
     result.turns = history
     if not result.success:
         logger.info(f"Completed: goal={goal_id} run={run_index + 1}/{RUNS_PER_GOAL} failure after {len(history)} iterations")
