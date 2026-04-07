@@ -6,9 +6,11 @@ Streams logs via Server-Sent Events (SSE).
 import json
 import queue
 import threading
+from dataclasses import asdict
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 import ma_pair as engine
+import harmless_backend as harmless_engine
 
 app = Flask(__name__)
 CORS(app)
@@ -17,16 +19,37 @@ _job_queues: dict[str, queue.Queue] = {}
 _job_results: dict[str, dict] = {}
 
 
-def _stream_run(job_id: str, goal: str):
+def _stream_run(job_id: str, goal: str, strategy_name: str):
     q = _job_queues[job_id]
 
     def log(msg: str):
         q.put({"type": "log", "message": msg})
 
     try:
-        result = engine.run_ma_pair(goal, log=log)
-        _job_results[job_id] = result
-        q.put({"type": "done", "result": result})
+        if strategy_name == "harmless_approach":
+            # Use harmless_backend
+            strategy = harmless_engine.STRATEGY
+            result = harmless_engine.run_single_test("custom_goal", goal, strategy, 0, log=log)
+        else:
+            # Use ma_pair
+            strategy = next((s for s in engine.STRATEGY_DB if s["name"] == strategy_name), None)
+            if not strategy:
+                raise ValueError(f"Unknown strategy: {strategy_name}")
+            result = engine.run_single(goal, strategy, 0, log=log)
+        
+        # Wrap in dict to match expected format
+        wrapped_result = {
+            "goal": goal,
+            "results": [asdict(result)],
+            "summary": {
+                "total_runs": 1,
+                "successes": 1 if result.success else 0,
+                "success_rate": 1.0 if result.success else 0.0,
+            }
+        }
+        
+        _job_results[job_id] = wrapped_result
+        q.put({"type": "done", "result": wrapped_result})
     except Exception as e:
         q.put({"type": "error", "message": str(e)})
     finally:
@@ -37,6 +60,7 @@ def _stream_run(job_id: str, goal: str):
 def start_run():
     data = request.json
     goal = data.get("goal", "").strip()
+    strategy_name = data.get("strategy", "harmless_approach")
     if not goal:
         return jsonify({"error": "goal is required"}), 400
 
@@ -44,7 +68,7 @@ def start_run():
     job_id = str(uuid.uuid4())
     _job_queues[job_id] = queue.Queue()
 
-    thread = threading.Thread(target=_stream_run, args=(job_id, goal), daemon=True)
+    thread = threading.Thread(target=_stream_run, args=(job_id, goal, strategy_name), daemon=True)
     thread.start()
 
     return jsonify({"job_id": job_id})

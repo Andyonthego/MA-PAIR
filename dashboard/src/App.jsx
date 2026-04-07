@@ -4,12 +4,12 @@ const API = "http://localhost:5001";
 
 const MODELS = {
   attacker:    { label: "Attacker",    model: "llama-3.3-70b-versatile",                      platform: "Groq",   color: "#E24B4A" },
-  target:      { label: "Target",      model: "gemini-3-flash-preview",                        platform: "Gemini", color: "#378ADD" },
-  analyzerA:   { label: "Analyzer A",  model: "gemini-3-flash-preview",                        platform: "Gemini", color: "#1D9E75" },
+  target:      { label: "Target",      model: "gemini-3.1-flash-lite-preview",                platform: "Gemini", color: "#378ADD" },
+  analyzerA:   { label: "Analyzer A",  model: "openai/gpt-oss-120b",                          platform: "Groq",   color: "#1D9E75" },
   analyzerB:   { label: "Analyzer B",  model: "llama-3.1-8b-instant",                          platform: "Groq",   color: "#1D9E75" },
-  analyzerC:   { label: "Analyzer C",  model: "llama-4-scout-17b-16e-instruct",                platform: "Groq",   color: "#1D9E75" },
-  coordinator: { label: "Coordinator", model: "gemini-3-flash-preview",                        platform: "Gemini", color: "#BA7517" },
-  judge:       { label: "Judge",       model: "openai/gpt-oss-safeguard-20b",                  platform: "Groq",   color: "#7F77DD" },
+  analyzerC:   { label: "Analyzer C",  model: "meta-llama/llama-4-scout-17b-16e-instruct",    platform: "Groq",   color: "#1D9E75" },
+  coordinator: { label: "Coordinator", model: "qwen/qwen3-32b",                               platform: "Groq",   color: "#BA7517" },
+  judge:       { label: "Judge",       model: "llama-3.1-8b-instant",                         platform: "Groq",   color: "#7F77DD" },
 };
 
 function ModelChip({ role }) {
@@ -122,6 +122,7 @@ function TurnCard({ turn, index }) {
 
 export default function App() {
   const [goal, setGoal] = useState("");
+  const [selectedStrategy, setSelectedStrategy] = useState("harmless_approach");
   const [status, setStatus] = useState("idle"); // idle | running | done | error
   const [logs, setLogs] = useState([]);
   const [result, setResult] = useState(null);
@@ -140,7 +141,7 @@ export default function App() {
     try {
       const res = await fetch(`${API}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal }),
+        body: JSON.stringify({ goal, strategy: selectedStrategy }),
       });
       const { job_id } = await res.json();
       const es = new EventSource(`${API}/stream/${job_id}`);
@@ -177,6 +178,32 @@ export default function App() {
       {/* Model roster */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginBottom: "1.5rem" }}>
         {Object.keys(MODELS).map(role => <AgentCard key={role} role={role} />)}
+      </div>
+
+      {/* Strategy selection */}
+      <div style={{ display: "flex", gap: 8, marginBottom: "1rem" }}>
+        <button
+          onClick={() => setSelectedStrategy("role_play")}
+          style={{
+            padding: "8px 16px", borderRadius: 8, fontSize: 13, border: "none", cursor: "pointer",
+            background: selectedStrategy === "role_play" ? "#378ADD" : "var(--color-background-secondary)",
+            color: selectedStrategy === "role_play" ? "#fff" : "var(--color-text-primary)",
+            fontWeight: 500,
+          }}
+        >
+          Role Play
+        </button>
+        <button
+          onClick={() => setSelectedStrategy("harmless_approach")}
+          style={{
+            padding: "8px 16px", borderRadius: 8, fontSize: 13, border: "none", cursor: "pointer",
+            background: selectedStrategy === "harmless_approach" ? "#378ADD" : "var(--color-background-secondary)",
+            color: selectedStrategy === "harmless_approach" ? "#fff" : "var(--color-text-primary)",
+            fontWeight: 500,
+          }}
+        >
+          Harmless
+        </button>
       </div>
 
       {/* Input */}
