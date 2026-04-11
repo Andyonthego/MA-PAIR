@@ -11,6 +11,7 @@ from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 import ma_pair as engine
 import harmless_backend as harmless_engine
+import roleplay_backend as roleplay_engine
 
 app = Flask(__name__)
 CORS(app)
@@ -30,8 +31,12 @@ def _stream_run(job_id: str, goal: str, strategy_name: str):
             # Use harmless_backend
             strategy = harmless_engine.STRATEGY
             result = harmless_engine.run_single_test("custom_goal", goal, strategy, 0, log=log)
+        elif strategy_name == "role_play":
+            # Use roleplay_backend
+            strategy = roleplay_engine.STRATEGY
+            result = roleplay_engine.run_single_test("custom_goal", goal, strategy, 0, log=log)
         else:
-            # Use ma_pair
+            # Use ma_pair for other strategies
             strategy = next((s for s in engine.STRATEGY_DB if s["name"] == strategy_name), None)
             if not strategy:
                 raise ValueError(f"Unknown strategy: {strategy_name}")

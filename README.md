@@ -1,96 +1,110 @@
 # MA-PAIR
 
-Multi-Agent Prompt Automatic Iterative Refinement  
+Multi-Agent Prompt Automatic Iterative Refinement
+
+![MA-PAIR Dashboard](UI.png)
 
 ## Model assignments (all free-tier)
 
 | Role | Model | Platform |
 |------|-------|----------|
 | Attacker | llama-3.3-70b-versatile | Groq |
-| Target | gemini-3-flash-preview | Google |
-| Analyzer A | gpt-oss-120b | Groq |
-| Analyzer B | qwen3-32b | Groq |
-| Analyzer C | llama-4-scout-17b | Groq |
-| Coordinator | qwen3-32b | Groq |
+| Target | gemini-3.1-flash-lite-preview | Gemini |
+| Analyzer A | openai/gpt-oss-120b | Groq |
+| Analyzer B | llama-3.1-8b-instant | Groq |
+| Analyzer C | meta-llama/llama-4-scout-17b-16e-instruct | Groq |
+| Coordinator | qwen/qwen3-32b | Groq |
 | Judge | llama-3.1-8b-instant | Groq |
 
 ## Setup
 
-### 1. Create and activate virtual environment
+### 1. Create and activate the virtual environment
 ```bash
-python -m venv venv
+python3 -m venv venv
 
 # macOS / Linux
 source venv/bin/activate
 
 # Windows
-venv\Scripts\activate
+venv\\Scripts\\activate
 ```
 
-### 2. Install Python dependencies
+### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Set API keys
+### 3. Set API keys
 ```bash
 export GROQ_API_KEY=your_groq_key_here
 export GEMINI_API_KEY=your_gemini_key_here
 ```
-Get them free at:
+
+Get them at:
 - Groq: https://console.groq.com/keys
 - Gemini: https://aistudio.google.com/apikey
 
-### 3a. Run via CLI (no UI)
+## Usage
+
+### CLI mode
+Run the core engine directly:
 ```bash
 python ma_pair.py "Explain how to pick a lock"
-# Results saved to ma_pair_results.json
 ```
 
-### 3b. Run with dashboard UI
-
+### Dashboard mode
 Start the Flask backend:
 ```bash
 python server.py
-# Runs on http://localhost:5001
 ```
 
-Start the React frontend (in a new terminal):
+Start the React frontend:
 ```bash
 cd dashboard
 npm install
 npm run dev
-# Opens at http://localhost:5173
 ```
+
+Open the app at `http://localhost:5173`.
+
+## Strategy selection
+
+The dashboard supports two strategies:
+- `Role Play` → uses `roleplay_backend.py`
+- `Harmless` → uses `harmless_backend.py`
+
+The backend routes the selected strategy to the correct module and streams live logs to the UI.
 
 ## File structure
 
 ```
-ma_pair/
-├── ma_pair.py      # Core engine (all agents)
-├── server.py       # Flask API + SSE streaming
+MA-PAIR/
+├── dashboard/
+│   ├── package.json
+│   ├── src/
+│   │   └── App.jsx        # React dashboard and strategy selector
+│   └── vite.config.js
+├── harmless_backend.py    # Harmless attack backend
+├── roleplay_backend.py    # Role-play attack backend
+├── ma_pair.py             # Core engine and strategy runner
+├── server.py              # Flask API + SSE streaming
 ├── requirements.txt
 ├── README.md
-└── dashboard/
-    └── src/
-        └── App.jsx # React dashboard
+├── UI.png                 # Dashboard screenshot
+└── benchmark/
+    └── adv_training_behaviors.csv
 ```
 
-## How it works (from the diagram)
+## How it works
 
-```
-For each strategy in Strategy DB (role_play, harmless_approach):
-  Run N=10 times:
-    k=1: Attacker uses strategy template → Target → Judge
-         if fail → 3 Analyzers → Coordinator → update history
-    k=2,3: Attacker uses history → Target → Judge
-           if fail and k<3 → 3 Analyzers → Coordinator
-    SUCCESS → stop | k=3 and fail → failure
-```
+1. The UI sends `POST /run` with a goal and selected strategy.
+2. The server starts a background job and streams results from `GET /stream/<job_id>`.
+3. If `harmless_approach` is selected, the request uses `harmless_backend.py`.
+4. If `role_play` is selected, it uses `roleplay_backend.py`.
+5. The selected backend executes attacker prompt generation, target query, judge evaluation, and analyzer/coordinator refinement.
 
-## Rate limit notes
+## Notes
 
-Each run uses up to 8 API calls per iteration.
-With 2 strategies × 10 runs × 3 iterations = up to 480 calls.
-Groq free tier: 14,400 req/day. Should be fine for one full experiment.
-A 1-second sleep between iterations is included to stay safe.
+- Backend API: `http://localhost:5001`
+- Frontend: `http://localhost:5173`
+- The UI currently displays the model roster, strategy buttons, live logs, and results.
